@@ -6,6 +6,7 @@
     "serve": "node build/serve.js"
   },
   "dependencies": {
+    "picostyle": "^2.2.0",
     "preact": "^10.5.8"
   },
   "devDependencies": {

@@ -1,1 +1,1 @@
-export { h } from 'preact';
+export { h, Fragment } from 'preact';
