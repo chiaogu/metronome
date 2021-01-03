@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { getCurrentPlayback, getTrackAnalysis, Track } from './spotifyApi';
+import { getTrackAnalysis, Track } from './spotifyApi';
+import useSpotifyPlayer from './useSpotifyPlayer';
+
 import * as Tone from 'tone';
 const synth = new Tone.MembraneSynth({ volume: -10 }).toDestination();
 
@@ -15,41 +17,47 @@ function useTrack(): {
   const [beats, setBeats] = useState<number[]>([]);
   const [tempo, setTempo] = useState<number>(0);
   const lastUpdateTime = useRef<number>();
+  const { playerState } = useSpotifyPlayer();
+  const trackId = playerState?.track_window?.current_track?.id;
   
   useEffect(() => {
-    const loadTrack = () => {
-      getCurrentPlayback()
-        .then(track => {
-          setTrack(track);
-          lastUpdateTime.current = Date.now();
-        })
-        .catch(setError);
-    };
-    loadTrack();
-    const intervalId = setInterval(loadTrack, 5000);
-    return () => clearInterval(intervalId);
-  }, []);
+    const { id, name, duration_ms, album } = playerState?.track_window?.current_track || {};
+    setTrack({
+      id,
+      name,
+      duration: duration_ms,
+      albumName: album?.name,
+      albumCoverUrl: album?.images[0].url,
+      isPlaying: !playerState?.paused,
+      progress: playerState?.position,
+    });
+    lastUpdateTime.current = Date.now();
+  }, [
+    playerState?.paused,
+    playerState?.position,
+    trackId,
+  ]);
   
   useEffect(() => {
-    if(!track?.id) return;
-    getTrackAnalysis(track.id)
+    if(!trackId) return;
+    getTrackAnalysis(trackId)
         .then(({ beats, track: { tempo } }) => {
           setBeats(beats.map(({ start }) => start));
           setTempo(tempo);
         })
         .catch(setError);
-  }, [track?.id]);
+  }, [trackId]);
   
   return { track, error, beats, lastUpdateTime: lastUpdateTime.current, tempo };
 }
 
-function useTimeBasedProgress({ tempo, lastUpdateTime }) {
-  useEffect(() => {
-    Tone.Transport.bpm.setValueAtTime(tempo, 0);
-    Tone.Transport.start(0.01);
-    console.log(lastUpdateTime)
-  }, [tempo, lastUpdateTime]);
-}
+// function useTimeBasedProgress({ tempo, lastUpdateTime }) {
+//   useEffect(() => {
+//     Tone.Transport.bpm.setValueAtTime(tempo, 0);
+//     Tone.Transport.start(0.01);
+//     console.log(lastUpdateTime)
+//   }, [tempo, lastUpdateTime]);
+// }
 
 function useProgress({ track, beats, lastUpdateTime }) {
   const [beatIndex, setBeatIndex] = useState<number>(0);
@@ -64,7 +72,7 @@ function useProgress({ track, beats, lastUpdateTime }) {
         let nextBeatIndex = 0;
         while(currentProgress / 1000 > beats[nextBeatIndex]) nextBeatIndex++;
         if(nextBeatIndex !== prevBeatIndex) {
-            // synth.triggerAttackRelease('C3', '16n');
+            synth.triggerAttackRelease('C3', '16n');
         }
         return nextBeatIndex;
       });
@@ -79,16 +87,16 @@ function useProgress({ track, beats, lastUpdateTime }) {
 
 async function start() {
   await Tone.start();
-  Tone.Transport.cancel();
-  Tone.Transport.scheduleRepeat((time) => {
-    synth.triggerAttackRelease('C3', '16n', time);
-  }, '4n');
+  // Tone.Transport.cancel();
+  // Tone.Transport.scheduleRepeat((time) => {
+  //   synth.triggerAttackRelease('C3', '16n', time);
+  // }, '4n');
 }
 
 export default function App() {
   const { track, error, beats, lastUpdateTime, tempo } = useTrack();
   const { progress, beatIndex } = useProgress({ track, beats, lastUpdateTime });
-  useTimeBasedProgress({ tempo, lastUpdateTime });
+  // useTimeBasedProgress({ tempo, lastUpdateTime });
   
   if(error) {
     return (
