@@ -1,64 +1,143 @@
-import { useEffect, useState } from 'preact/hooks';
-import style from './style';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { getCurrentPlayback, getTrackAnalysis, Track } from './spotifyApi';
+import * as Tone from 'tone';
+const synth = new Tone.MembraneSynth({ volume: -10 }).toDestination();
 
-type Track = {
-  name: string;
-  duration: number;
-  albumName: string;
-  albumCoverUrl: string;
-} | null;
-
-const TOKEN = 'BQBp8w2aU7OiTWoiPxLjOOVf9MIu8cK5ogZrtIYETI2F9VCvQVoz5-A02BopE7XTsjyUyDrkBEsqi_KF_kWx8CN8ndYD471zHCQwuuBwfBlUyzrq7ZQ5wJ8aXWDQQFwm74QekquShBCuAM_tdosViVjM';
-
-async function getTrackAnalysis() {
-  
-}
-
-async function getCurrentPlayback(): Promise<Track> {
-  const { item, error } = await (await fetch('https://api.spotify.com/v1/me/player', {
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-    },
-  })).json();
-  if(error) throw new Error(error.message);
-  return {
-    name: item.name,
-    duration: item.duration_ms,
-    albumName: item.album.name,
-    albumCoverUrl: item.album.images[0].url,
-  }
-}
-
-const AlbumCover = style('img')({
-  width: '200px',
-  height: '200px',
-});
-
-export default function App() {
+function useTrack(): {
+  track: Track;
+  error: Error;
+  beats: number[];
+  lastUpdateTime: number;
+  tempo: number;
+} {
   const [track, setTrack] = useState<Track>(null);
   const [error, setError] = useState<Error>(null);
+  const [beats, setBeats] = useState<number[]>([]);
+  const [tempo, setTempo] = useState<number>(0);
+  const lastUpdateTime = useRef<number>();
   
   useEffect(() => {
-    getCurrentPlayback().then(setTrack).catch(setError);
-    // const intervalId = setInterval(() => {
-    //   getCurrentPlayback();
-    // }, 5000);
-    // return () => clearInterval(intervalId);
+    const loadTrack = () => {
+      getCurrentPlayback()
+        .then(track => {
+          setTrack(track);
+          lastUpdateTime.current = Date.now();
+        })
+        .catch(setError);
+    };
+    loadTrack();
+    const intervalId = setInterval(loadTrack, 5000);
+    return () => clearInterval(intervalId);
   }, []);
+  
+  useEffect(() => {
+    if(!track?.id) return;
+    getTrackAnalysis(track.id)
+        .then(({ beats, track: { tempo } }) => {
+          setBeats(beats.map(({ start }) => start));
+          setTempo(tempo);
+        })
+        .catch(setError);
+  }, [track?.id]);
+  
+  return { track, error, beats, lastUpdateTime: lastUpdateTime.current, tempo };
+}
+
+function useTimeBasedProgress({ tempo, lastUpdateTime }) {
+  useEffect(() => {
+    Tone.Transport.bpm.setValueAtTime(tempo, 0);
+    Tone.Transport.start(0.01);
+    console.log(lastUpdateTime)
+  }, [tempo, lastUpdateTime]);
+}
+
+function useProgress({ track, beats, lastUpdateTime }) {
+  const [beatIndex, setBeatIndex] = useState<number>(0);
+  const [progress, setProgress] = useState(0);
+  const animationId = useRef<number>();
+  
+  useEffect(() => {
+    const updateProgress = () => {
+      const currentProgress = track.progress + (Date.now() - lastUpdateTime);
+      setProgress(currentProgress);
+      setBeatIndex(prevBeatIndex => {
+        let nextBeatIndex = 0;
+        while(currentProgress / 1000 > beats[nextBeatIndex]) nextBeatIndex++;
+        if(nextBeatIndex !== prevBeatIndex) {
+            // synth.triggerAttackRelease('C3', '16n');
+        }
+        return nextBeatIndex;
+      });
+      animationId.current = requestAnimationFrame(updateProgress);
+    };
+    if(track?.isPlaying) updateProgress();
+    return () => cancelAnimationFrame(animationId.current)
+  }, [track?.isPlaying, track?.progress, beats, lastUpdateTime, beatIndex]);
+  
+  return { progress, beatIndex };
+}
+
+async function start() {
+  await Tone.start();
+  Tone.Transport.cancel();
+  Tone.Transport.scheduleRepeat((time) => {
+    synth.triggerAttackRelease('C3', '16n', time);
+  }, '4n');
+}
+
+export default function App() {
+  const { track, error, beats, lastUpdateTime, tempo } = useTrack();
+  const { progress, beatIndex } = useProgress({ track, beats, lastUpdateTime });
+  useTimeBasedProgress({ tempo, lastUpdateTime });
   
   if(error) {
     return (
       <div>{error.message}</div>
-    )
+    );
   }
   
   if(track) {
     return (
-      <>
-        <div>{track.name}</div>
-        <div>{track.albumName}</div>
-        <AlbumCover src={track.albumCoverUrl}/>
-      </>
+      <div
+        onClick={start}
+      >
+        <img
+          style={{
+            width: '200px',
+            height: '200px',
+          }}
+          src={track.albumCoverUrl}
+        />
+        <h1>{track.name}</h1>
+        <h2>{track.albumName}</h2>
+        <div
+          style={{
+            position: 'relative',
+            height: '20px',
+            width: '1000px',
+          }}
+        >
+          <div 
+            style={{
+              width: '100%',
+              height: '10px',
+              border: '1px solid black'
+            }}
+          >
+            <div 
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'black',
+                transformOrigin: '0 50%',
+                transform: `scaleX(${progress / track.duration})`
+              }}
+            ></div>
+          </div>
+        </div>
+        <h4>{tempo}</h4>
+        <h1>{beatIndex}</h1>
+      </div>
     )
   }
 }

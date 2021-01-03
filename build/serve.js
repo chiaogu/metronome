@@ -12,6 +12,7 @@ import {
   const { rebuild } = await esbuild.build({
     ...buildOptions,
     incremental: true,
+    sourcemap: true,
   }); 
   
   chokidar

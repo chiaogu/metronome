@@ -6,8 +6,8 @@
     "serve": "node build/serve.js"
   },
   "dependencies": {
-    "picostyle": "^2.2.0",
-    "preact": "^10.5.8"
+    "preact": "^10.5.8",
+    "tone": "^14.7.58"
   },
   "devDependencies": {
     "chokidar": "^3.4.3",
