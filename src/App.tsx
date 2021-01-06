@@ -1,9 +1,11 @@
+import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { getTrackAnalysis, Track } from './spotifyApi';
 import useSpotifyPlayer from './useSpotifyPlayer';
-
+import * as Timer from './timer';
 import * as Tone from 'tone';
-const synth = new Tone.MembraneSynth({ volume: -10 }).toDestination();
+import { Time } from 'tone';
+const synth = new Tone.MembraneSynth({ volume: 0 }).toDestination();
 
 function useTrack(): {
   track: Track;
@@ -31,7 +33,7 @@ function useTrack(): {
       isPlaying: !playerState?.paused,
       progress: playerState?.position,
     });
-    lastUpdateTime.current = Date.now();
+    lastUpdateTime.current = Tone.now() * 1000;
   }, [
     playerState?.paused,
     playerState?.position,
@@ -51,35 +53,26 @@ function useTrack(): {
   return { track, error, beats, lastUpdateTime: lastUpdateTime.current, tempo };
 }
 
-// function useTimeBasedProgress({ tempo, lastUpdateTime }) {
-//   useEffect(() => {
-//     Tone.Transport.bpm.setValueAtTime(tempo, 0);
-//     Tone.Transport.start(0.01);
-//     console.log(lastUpdateTime)
-//   }, [tempo, lastUpdateTime]);
-// }
-
 function useProgress({ track, beats, lastUpdateTime }) {
   const [beatIndex, setBeatIndex] = useState<number>(0);
   const [progress, setProgress] = useState(0);
-  const animationId = useRef<number>();
   
   useEffect(() => {
-    const updateProgress = () => {
-      const currentProgress = track.progress + (Date.now() - lastUpdateTime);
+    const updateProgress = time => {
+      const currentProgress = track.progress + (time - lastUpdateTime);
       setProgress(currentProgress);
       setBeatIndex(prevBeatIndex => {
         let nextBeatIndex = 0;
         while(currentProgress / 1000 > beats[nextBeatIndex]) nextBeatIndex++;
         if(nextBeatIndex !== prevBeatIndex) {
+            console.log(beats[nextBeatIndex] * 1000 - currentProgress)
             synth.triggerAttackRelease('C3', '16n');
         }
         return nextBeatIndex;
       });
-      animationId.current = requestAnimationFrame(updateProgress);
     };
-    if(track?.isPlaying) updateProgress();
-    return () => cancelAnimationFrame(animationId.current)
+    if(track?.isPlaying) Timer.start(updateProgress);
+    return () => Timer.stop();
   }, [track?.isPlaying, track?.progress, beats, lastUpdateTime, beatIndex]);
   
   return { progress, beatIndex };
@@ -87,16 +80,11 @@ function useProgress({ track, beats, lastUpdateTime }) {
 
 async function start() {
   await Tone.start();
-  // Tone.Transport.cancel();
-  // Tone.Transport.scheduleRepeat((time) => {
-  //   synth.triggerAttackRelease('C3', '16n', time);
-  // }, '4n');
 }
 
 export default function App() {
   const { track, error, beats, lastUpdateTime, tempo } = useTrack();
   const { progress, beatIndex } = useProgress({ track, beats, lastUpdateTime });
-  // useTimeBasedProgress({ tempo, lastUpdateTime });
   
   if(error) {
     return (
@@ -144,7 +132,12 @@ export default function App() {
           </div>
         </div>
         <h4>{tempo}</h4>
-        <h1>{beatIndex}</h1>
+        <h1
+          style={{
+            fontSize: '400px',
+            margin: 0,
+          }}
+        >{beatIndex}</h1>
       </div>
     )
   }

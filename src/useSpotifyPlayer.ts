@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 
-const TOKEN = 'BQAhxOeZt8F2Q2Z2Op7fMJKXe3RLkqYGT0g3vTYa8ElkkTzzaLUsStMKQRHls8efx7nQ_7DXDrNbR_FVG4DsjOBzUE1Oghp5YsfdrBl7P-ZjKl9Qtevr0Sa7Mjbxvmg5MMLgxMSVrZvZR_dHZs-yP1qEUSsrO9Oe5QRG'
-const PLAYER_NAME = 'Mute Ads';
+const TOKEN = 'BQCwy4kLZU-qRjahEdg-JutJnbJ09r24SwWmGkpuTGVSfY7oSdxyg1QFNo4qeyxvdazMxSdk6vQ6NWnYtWPZi3aZS_KV2oI3wOcXXKk785D0VvcWDXmHm-M05bBSQv4YuQSlH7D1a4EbVp1yMArOx98DvruZAvPUKwTz';
+const PLAYER_NAME = 'Metronome';
 
 function getTrackInfo(state) {
   const { track_window: { current_track: currentTrack = {} } = {} } = (state || {});

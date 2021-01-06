@@ -5,9 +5,11 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const DIST_PATH = path.join(__dirname, '..', 'dist');
 export const SRC_PATH = path.join(__dirname, '..', 'src');
 export const buildOptions = {
-  entryPoints: [path.join(SRC_PATH, 'index.tsx')],
-  outfile: path.join(DIST_PATH, 'index.js'),
-  inject: [path.join(__dirname, './jsx-shim.js')],
+  entryPoints: [
+    path.join(SRC_PATH, 'index.tsx'),
+    path.join(SRC_PATH, 'worker.ts'),
+  ],
+  outdir: path.join(DIST_PATH),
   define: {
     'process.env.NODE_ENV': `"${process.env.NODE_ENV}"`,
   },
