@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 
-const TOKEN = 'BQCwy4kLZU-qRjahEdg-JutJnbJ09r24SwWmGkpuTGVSfY7oSdxyg1QFNo4qeyxvdazMxSdk6vQ6NWnYtWPZi3aZS_KV2oI3wOcXXKk785D0VvcWDXmHm-M05bBSQv4YuQSlH7D1a4EbVp1yMArOx98DvruZAvPUKwTz';
+const TOKEN = '';
 const PLAYER_NAME = 'Metronome';
 
 function getTrackInfo(state) {

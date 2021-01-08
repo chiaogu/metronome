@@ -8,7 +8,7 @@ export type Track = {
   isPlaying: boolean;
 } | null;
 
-export const TOKEN = 'BQCBkmaadJalTdnTL9y6H9m8S8Mpf9wuBkaYBIePJ4HOFhJsM9DwHMWP4PCykkcT3OWMf7d_6aEkRbyEAHss4EkGQNYBr7EFq9Oz9aXeeiy-UsVobBhkbhLvYNw7PjaYUljHUuFlsXhlCcXPaw0csAWYMRr1dvufbRWpFg5H';
+export const TOKEN = 'BQC1ioAGBVrvpaTGwZmqoWUv1jmp5qX-WB5lhyrM3gZbQW_iqjS8ts0RN1O6F1N8JcTz8Wb3G0X9KWsuiPr5tM9oO1Cg6pp-EK0yzIU7DwONpdScc0rX-sLT_QNt4o2JNm7Hf1MOgVlexprzSZkQIRBg3O3CLnTQPXnfQ9xE';
 
 async function request(endpoint) {
   const { error, ...rest } = await (await fetch(`https://api.spotify.com/v1/${endpoint}`, {
