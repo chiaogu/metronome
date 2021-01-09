@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { parseGIF, decompressFrames } from 'gifuct-js'
 import { useEffect, useRef } from 'preact/hooks';
+import * as Timer from './utils/timer';
 
 async function getGifFrames(url) {
   const response = await fetch(url);
@@ -24,14 +25,14 @@ export default function GifPlayer({ }) {
   const ref = useRef<HTMLCanvasElement>();
   
   useEffect(() => {
+    let index = 0;
+    let lastTimeDraw = Date.now();
+    
     (async () => {
       const frames = await getGifFrames('https://media.giphy.com/media/1GrsfWBDiTN60/giphy.gif');
-      console.log(frames);
       const ctx = ref.current.getContext('2d');
       ctx.canvas.width = frames[0].dims.width;
       ctx.canvas.height = frames[0].dims.height;
-      let index = 0;
-      let lastTimeDraw = Date.now();
       
       function draw() {
         const frame = frames[index];
@@ -44,6 +45,13 @@ export default function GifPlayer({ }) {
       }
       draw();
     })();
+    
+    const tick = (time) => {
+      
+    }
+    
+    Timer.addToneListener(tick);
+    return () => Timer.removeListener(tick);
   }, []);
   
   return (
