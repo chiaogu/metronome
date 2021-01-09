@@ -1,4 +1,4 @@
-import { WORKER_EVENT } from './shared';
+import { WORKER_EVENT } from './utils/shared';
  
 let intervalId;
 

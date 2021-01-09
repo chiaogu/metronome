@@ -1,17 +1,43 @@
 import { h } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import * as Tone from 'tone';
-import useTrack from './useTrack';
-import useProgress from './useProgress';
+import GifPlayer from './GifPlayer';
+import listen from './utils/listen';
 
 async function start() {
   await Tone.start();
 }
 
-export default function App() {
-  const { track, error, beats, lastUpdateTime, tempo } = useTrack();
-  const { progress, beatIndex } = useProgress({ track, beats, lastUpdateTime });
+function useListen() {
+  const [track, onTrackChange] = useState({});
+  const [progress, onProgress] = useState(0);
+  const [beat, onBeat] = useState(undefined);
+  const [error, onError] = useState({})
+  
+  useEffect(() => {
+    const stopListening = listen({
+      onTrackChange,
+      onProgress,
+      onBeat,
+      onError,
+    });
+    return stopListening;
+  }, []);
+  
+  return { ...track, ...beat, progress, error };
+}
 
-  if(error) {
+export default function App() {
+  const { track, error, tempo, progress, beatIndex, bpm } = useListen();
+  const [highlight, setHighlight] = useState(false);
+  
+  useEffect(() => {
+    setHighlight(true);
+    const timeoutId = setTimeout(setHighlight, 200);
+    return () => clearTimeout(timeoutId);
+  }, [beatIndex])
+  
+  if(error?.message) {
     return (
       <div>{error.message}</div>
     );
@@ -57,10 +83,15 @@ export default function App() {
           </div>
         </div>
         <h4>{tempo}</h4>
+        <GifPlayer bpm={bpm}/>
         <h1
           style={{
+            width: 'fit-content',
             fontSize: '400px',
             margin: 0,
+            transform: highlight ? 'scale(1)': 'scale(0.9)',
+            transition: !highlight && 'transform 0.3s',
+            transitionOrigin: '50% 50%',
           }}
         >{beatIndex}</h1>
       </div>

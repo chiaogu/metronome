@@ -6,6 +6,7 @@
     "serve": "node build/serve.js"
   },
   "dependencies": {
+    "gifuct-js": "^2.0.0",
     "preact": "^10.5.8",
     "tone": "^14.7.58"
   },
