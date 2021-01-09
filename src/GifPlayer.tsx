@@ -20,7 +20,7 @@ function drawOnOffScreenCanvas(frame) {
   return canvas;
 }
     
-export default function GifPlayer({ bpm }) {
+export default function GifPlayer({ }) {
   const ref = useRef<HTMLCanvasElement>();
   
   useEffect(() => {

@@ -67,8 +67,8 @@ function trackProgress({ getTrack, onProgress, onBeat }) {
       prevBeatIndex = nextBeatIndex;
     }
   };
-  Timer.start(updateProgress);
-  return () => Timer.stop();
+  Timer.addListener(updateProgress);
+  return () => Timer.removeListener(updateProgress);
 }
 
 export default function listen({ onTrackChange, onProgress, onBeat, onError }) {
