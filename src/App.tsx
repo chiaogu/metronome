@@ -5,6 +5,7 @@ import * as Tone from 'tone';
 import { useState } from 'preact/hooks';
 import GifTimeline from './GifTimeline';
 import GifPlayer from './GifPlayer';
+import { SharedStateProvider } from './useSharedState';
 
 export default function App() {
   const [isStarted, setStarted] = useState(false);
@@ -16,7 +17,7 @@ export default function App() {
   }
   
   return (
-    <div>
+    <SharedStateProvider>
       {!isStarted && <button onClick={start}>Start</button>}
       {isStarted && (
         <div
@@ -30,6 +31,6 @@ export default function App() {
           <GifPlayer/>
         </div>
       )}
-    </div>
+    </SharedStateProvider>
   )
 }

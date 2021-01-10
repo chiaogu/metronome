@@ -4,10 +4,11 @@ import * as Tone from 'tone';
 import * as Timer from './utils/timer';
 import GifPlayer from './GifPlayer';
 import GifTimeline from './GifTimeline';
+import useSharedState from './useSharedState';
 
 export default function Metronome() {
   const [highlight, setHighlight] = useState(false);
-  const [bpm, setBpm] = useState(60);
+  const { bpm, setBpm } = useSharedState();
   
   useEffect(() => {
     const tick = () => setHighlight(true);
