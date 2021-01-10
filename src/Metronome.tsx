@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'preact/hooks';
 import * as Tone from 'tone';
 import * as Timer from './utils/timer';
 import GifPlayer from './GifPlayer';
+import GifTimeline from './GifTimeline';
 
 export default function Metronome() {
   const [highlight, setHighlight] = useState(false);
@@ -27,7 +28,6 @@ export default function Metronome() {
       display: 'flex',
       flexDirection: 'column',
     }}>
-      <GifPlayer/>
       <h1
         style={{
           margin: '32px auto',

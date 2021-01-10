@@ -25,8 +25,8 @@ const synth = new Tone.MembraneSynth({ volume: 0 }).toDestination();
 Tone.Transport.scheduleRepeat(time => {
   if(isDownbeat) {
     // synth.triggerAttackRelease('C3', '8n', time);
-    console.timeEnd('tick');
-    console.time('tick');
+    // console.timeEnd('tick');
+    // console.time('tick');
     toneListeners.forEach(callback => callback(time, isDownbeat));
   }
   isDownbeat = !isDownbeat;

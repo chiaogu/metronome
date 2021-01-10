@@ -34,6 +34,7 @@ function trackProgress({ getTrack, onProgress, onBeat }) {
   let beatIndex;
   let bpm;
   let trackId;
+  let prevTrackProgress;
   
   const updateProgress = time => {
     const trackData = getTrack();
@@ -43,13 +44,15 @@ function trackProgress({ getTrack, onProgress, onBeat }) {
     progress = track.progress + (time - lastUpdateTime);
     onProgress(progress);
     
-    if(track.id !== trackId) {
+    if(track.id !== trackId || track.progress < prevTrackProgress) {
       progress = 0;
       prevBeatIndex = 0;
       beatIndex = 0;
       bpm = 0;
       trackId = track.id;
     }
+    
+    prevTrackProgress= track.progress;
     
     let nextBeatIndex = prevBeatIndex;
     while(beats[nextBeatIndex] * 1000 - progress < 30) {

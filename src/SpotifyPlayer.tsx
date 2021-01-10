@@ -27,14 +27,16 @@ function useListen() {
 }
 
 export default function SpotifyPlayer() {
-  const { track, error, tempo, progress, beatIndex, bpm } = useListen();
+  const { track, error, progress, beatIndex, bpm = 0 } = useListen();
   const [highlight, setHighlight] = useState(false);
   
   useEffect(() => {
     setHighlight(true);
-    const timeoutId = setTimeout(setHighlight, 200);
-    return () => clearTimeout(timeoutId);
   }, [beatIndex])
+  
+  useEffect(() => {
+    if(highlight) requestAnimationFrame(() => setHighlight(false));
+  }, [highlight])
   
   if(error?.message) {
     return (
@@ -45,6 +47,11 @@ export default function SpotifyPlayer() {
   if(track) {
     return (
       <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
         onClick={start}
       >
         <img
@@ -60,7 +67,7 @@ export default function SpotifyPlayer() {
           style={{
             position: 'relative',
             height: '20px',
-            width: '1000px',
+            width: '300px',
           }}
         >
           <div 
@@ -76,22 +83,20 @@ export default function SpotifyPlayer() {
                 height: '100%',
                 background: 'black',
                 transformOrigin: '0 50%',
-                transform: `scaleX(${progress / track.duration})`
+                transform: `scaleX(${Math.min(1, progress / track.duration)})`
               }}
             ></div>
           </div>
         </div>
-        <h4>{tempo} / {bpm}</h4>
         <h1
           style={{
             width: 'fit-content',
-            fontSize: '400px',
-            margin: 0,
-            transform: highlight ? 'scale(1)': 'scale(0.9)',
-            transition: !highlight && 'transform 0.3s',
+            fontSize: '100px',
+            transform: highlight ? 'scale(1.5)': 'scale(1)',
+            transition: !highlight && `transform ${1000 * 60 / bpm}ms`,
             transitionOrigin: '50% 50%',
           }}
-        >{beatIndex}</h1>
+        >{Math.round(bpm)}</h1>
       </div>
     )
   }
