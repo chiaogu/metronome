@@ -1,80 +1,78 @@
 import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as Timer from './utils/timer';
-import { getGifFrames, getFrameCanvases, getAverageDelay } from './utils/gif';
+import { getGifFrames, getFrameCanvases } from './utils/gif';
 import useSharedState from './useSharedState';
-import { BASE_BPM } from './constants';
-import { Tone } from 'tone/build/esm/core/Tone';
+import * as Tone from 'tone';
+import { GIF_META } from './constants';
     
-export default function GifPlayer({ beatFrameIndex }) {
+export default function GifPlayer({ url }) {
   const { bpm } = useSharedState();
   const ref = useRef<HTMLCanvasElement>();
   const bpmRef = useRef(60);
+  const frameCanvases = useRef([]);
+  const frameQueue = useRef([]);
   
   useEffect(() => {
     if(bpm) bpmRef.current = bpm;
   }, [bpm]);
   
   useEffect(() => {
-    let index = beatFrameIndex;
-    let lastTimeDraw = 0;
-    let lastTimeDrawBeat = 0;
-    let animationId;
-    
-    Timer.addToneListener(time => {
-      index = beatFrameIndex;
-      lastTimeDraw = 0;
-      lastTimeDrawBeat = 0;
-    });
-    
     (async () => {
-      const frames = await getGifFrames('https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif');
-      const frameCanvases = getFrameCanvases(frames);
+      const frames = await getGifFrames(url);
+      const meta = GIF_META[url];
+      frameCanvases.current = getFrameCanvases(frames, meta.offset);
       
-      const ctx = ref.current.getContext('2d');
-      ctx.canvas.width = frames[0].dims.width;
-      ctx.canvas.height = frames[0].dims.height;
-      ctx.canvas.style.width = `${ctx.canvas.width}px`;
-      ctx.canvas.style.height = `${ctx.canvas.height}px`;
-      
-      function draw() {
-        const beatInterval = 60 / bpmRef.current * 1000;
-        const frameInterval = beatInterval / frames.length;
-        console.log(frameInterval, beatInterval);
-        if(Date.now() - lastTimeDraw >= frameInterval || Date.now() - lastTimeDrawBeat >= beatInterval) {
-          ctx.drawImage(frameCanvases[index], 0, 0);
-          
-          ctx.font = '24px mono';
-          ctx.textBaseline = 'top';
-          ctx.fillStyle = '#fff';
-          ctx.fillText(`${index}`, 0, 0)
-
-          const isOnBeat = index === beatFrameIndex;
-          if(isOnBeat || Date.now() - lastTimeDrawBeat < 100) {
-            ctx.font = '72px mono';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(`👏`, ctx.canvas.width, ctx.canvas.height);
-            
-            if(isOnBeat) {
-              console.timeEnd('beat');
-              console.time('beat');
-              lastTimeDrawBeat = Date.now();
-            }
-          }
-          
-          lastTimeDraw = Date.now();
-          index = (index + 1) % frames.length;
-        }
-        animationId = requestAnimationFrame(draw);
-      }
-      draw();
+      const canvas = ref.current;
+      canvas.width = frames[0].dims.width;
+      canvas.height = frames[0].dims.height;
+      canvas.style.width = `${canvas.width}px`;
+      canvas.style.height = `${canvas.height}px`;
     })();
+  }, [url]);
+  
+  useEffect(() => {
+    const tick = time => {
+      const beatInterval = 60 / bpmRef.current * 1000;
+      const frameInterval = beatInterval / frameCanvases.current.length;
+      frameQueue.current = frameCanvases.current.map((frame, index) => ({
+        time: time * 1000 + frameInterval * index,
+        image: frame,
+      }));
+    };
+    Timer.addToneListener(tick);
+    return () => Timer.removeListener(tick);
+  }, [])
+  
+  useEffect(() => {
+    let lastTimeOnBeat;
+    let animationId;
+    const ctx = ref.current.getContext('2d');
+    
+    function draw() {
+      const isOnBeat = frameQueue.current.length === frameCanvases.current.length;
+      
+      while(Tone.now() * 1000 >= frameQueue.current[0]?.time) {
+        ctx.drawImage(frameQueue.current[0].image, 0, 0);
+        frameQueue.current.shift();
+      }
+      
+      if(isOnBeat || Tone.now() * 1000 - lastTimeOnBeat < 100) {
+        ctx.font = '72px mono';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`👏`, ctx.canvas.width, ctx.canvas.height);
+        if(isOnBeat) lastTimeOnBeat = Tone.now() * 1000;
+      }
+      
+      animationId = requestAnimationFrame(draw);
+    }
+    draw();
     
     return () => {
       if(animationId) cancelAnimationFrame(animationId);
     }
-  }, [beatFrameIndex]);
+  }, []);
   
   return (
     <canvas ref={ref}/>

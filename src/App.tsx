@@ -22,7 +22,7 @@ export default function App() {
       {!isStarted && (
         <div>
           <Metronome/>
-          <GifTimeline/>
+          <GifTimeline url='https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif'/>
         </div>
       )}
     </SharedStateProvider>
