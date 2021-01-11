@@ -1,7 +1,8 @@
 import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import GifPlayer from './GifPlayer';
-import { getGifFrames, getFrameCanvases } from './utils/gif';
+import { getGifFrames, getFrameCanvases, getAverageDelay } from './utils/gif';
+import { BASE_BPM } from './constants';
 
 function drawFrame(ctx, frame, x, y, dSize) {
   const w = frame.width;
@@ -17,8 +18,11 @@ export default function GifTimeline({ }) {
   
   useEffect(() => {
     (async () => {
-      const frames = await getGifFrames('https://media.giphy.com/media/1GrsfWBDiTN60/giphy.gif');
+      const frames = await getGifFrames('https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif');
       const frameCanvases = getFrameCanvases(frames);
+      const frameInterval = getAverageDelay(frames);
+      // console.log(frameInterval, frames.length * frameInterval);
+      
       const ctx = ref.current.getContext('2d');
       ctx.canvas.width = ctx.canvas.clientWidth;
       ctx.canvas.height = ctx.canvas.clientHeight;
@@ -37,15 +41,29 @@ export default function GifTimeline({ }) {
       })
       
       function draw() {
-        const duplicateTime = Math.ceil(ctx.canvas.height / (size * frameCanvases.length) * 2);
+        ctx.beginPath();
+        ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        const duplicateTime = Math.max(2, Math.ceil(ctx.canvas.height / (size * frameCanvases.length) * 2));
         frameCanvases.forEach((frame, index) => {
           for(let i = 0; i < duplicateTime; i++) {
             const y = (index + i * frameCanvases.length) * size + offsetY;
             drawFrame(ctx, frame, 0, y, size);
+            
             ctx.font = '24px mono';
             ctx.textBaseline = 'top';
             ctx.fillStyle = '#fff';
             ctx.fillText(`${index}`, 0, y)
+            
+            if(index === 0) {
+              ctx.beginPath();
+              ctx.moveTo(0, y);
+              ctx.lineTo(ctx.canvas.width, y);
+              ctx.strokeStyle = '#000';
+              ctx.stroke();      
+            }
           }
         });
         requestAnimationFrame(draw);
@@ -55,13 +73,21 @@ export default function GifTimeline({ }) {
   }, []);
   
   return (
-    <canvas
-      ref={ref}
+    <div
       style={{
-        border: '1px solid black',
-        width: '300px',
+        display: 'flex',
         height: '100%',
       }}
-    />
+    >
+      <canvas
+        ref={ref}
+        style={{
+          border: '1px solid black',
+          width: '300px',
+          height: '100%',
+        }}
+      />
+      <GifPlayer beatFrameIndex={5}/>
+    </div>
   );
 }

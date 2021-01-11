@@ -30,3 +30,8 @@ export function getFrameCanvases(frames) {
     return canvas;
   })
 }
+
+export function getAverageDelay(frames) {
+  const sum = frames.reduce((sum, { delay }) => sum + delay, 0);
+  return sum / frames.length;
+}

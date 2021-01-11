@@ -19,16 +19,10 @@ export default function App() {
   return (
     <SharedStateProvider>
       {!isStarted && <button onClick={start}>Start</button>}
-      {isStarted && (
-        <div
-          style={{
-            display: 'flex',
-            height: '100%',
-          }}
-        >
+      {!isStarted && (
+        <div>
           <Metronome/>
           <GifTimeline/>
-          <GifPlayer/>
         </div>
       )}
     </SharedStateProvider>

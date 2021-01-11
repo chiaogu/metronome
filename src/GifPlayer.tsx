@@ -1,10 +1,12 @@
 import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as Timer from './utils/timer';
-import { getGifFrames, getFrameCanvases } from './utils/gif';
+import { getGifFrames, getFrameCanvases, getAverageDelay } from './utils/gif';
 import useSharedState from './useSharedState';
+import { BASE_BPM } from './constants';
+import { Tone } from 'tone/build/esm/core/Tone';
     
-export default function GifPlayer() {
+export default function GifPlayer({ beatFrameIndex }) {
   const { bpm } = useSharedState();
   const ref = useRef<HTMLCanvasElement>();
   const bpmRef = useRef(60);
@@ -14,13 +16,21 @@ export default function GifPlayer() {
   }, [bpm]);
   
   useEffect(() => {
-    let index = 0;
-    let lastTimeDraw = Date.now();
+    let index = beatFrameIndex;
+    let lastTimeDraw = 0;
+    let lastTimeDrawBeat = 0;
     let animationId;
     
+    Timer.addToneListener(time => {
+      index = beatFrameIndex;
+      lastTimeDraw = 0;
+      lastTimeDrawBeat = 0;
+    });
+    
     (async () => {
-      const frames = await getGifFrames('https://media.giphy.com/media/1GrsfWBDiTN60/giphy.gif');
+      const frames = await getGifFrames('https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif');
       const frameCanvases = getFrameCanvases(frames);
+      
       const ctx = ref.current.getContext('2d');
       ctx.canvas.width = frames[0].dims.width;
       ctx.canvas.height = frames[0].dims.height;
@@ -28,10 +38,31 @@ export default function GifPlayer() {
       ctx.canvas.style.height = `${ctx.canvas.height}px`;
       
       function draw() {
-        const intervalRatio = 60 / bpmRef.current;
-        const frame = frames[index];
-        if(Date.now() - lastTimeDraw >= frame.delay * intervalRatio) {
+        const beatInterval = 60 / bpmRef.current * 1000;
+        const frameInterval = beatInterval / frames.length;
+        console.log(frameInterval, beatInterval);
+        if(Date.now() - lastTimeDraw >= frameInterval || Date.now() - lastTimeDrawBeat >= beatInterval) {
           ctx.drawImage(frameCanvases[index], 0, 0);
+          
+          ctx.font = '24px mono';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(`${index}`, 0, 0)
+
+          const isOnBeat = index === beatFrameIndex;
+          if(isOnBeat || Date.now() - lastTimeDrawBeat < 100) {
+            ctx.font = '72px mono';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`👏`, ctx.canvas.width, ctx.canvas.height);
+            
+            if(isOnBeat) {
+              console.timeEnd('beat');
+              console.time('beat');
+              lastTimeDrawBeat = Date.now();
+            }
+          }
+          
           lastTimeDraw = Date.now();
           index = (index + 1) % frames.length;
         }
@@ -43,7 +74,7 @@ export default function GifPlayer() {
     return () => {
       if(animationId) cancelAnimationFrame(animationId);
     }
-  }, []);
+  }, [beatFrameIndex]);
   
   return (
     <canvas ref={ref}/>
