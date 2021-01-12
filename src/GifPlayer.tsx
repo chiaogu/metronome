@@ -1,11 +1,12 @@
 import { h } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import * as Timer from './utils/timer';
 import { getGifFrames, getFrameCanvases } from './utils/gif';
 import useSharedState from './useSharedState';
 import * as Tone from 'tone';
 import { GIF_META } from './constants';
-import listen from './utils/listen';
+import listen from './utils/spotify';
+import useBeat from './useBeat';
     
 export default function GifPlayer({ url }) {
   const { bpm } = useSharedState();
@@ -17,33 +18,32 @@ export default function GifPlayer({ url }) {
     offset: 0,
     beats: 1,
   });
+  const beats = useRef(1);
+  const beat = useRef(0);
+  
+  const onBeat = useCallback(() => {
+    const beatInterval = 60 / bpmRef.current * 1000 * beats.current;
+    const frameInterval = beatInterval / frameCanvases.current.length;
+    if(frameCanvases.current.length !== 0 && beat.current === 0) {
+      frameQueue.current = frameCanvases.current.map((frame, index) => ({
+        time: Tone.now() * 1000 + frameInterval * index,
+        image: frame,
+      }));
+    }
+    beat.current = (beat.current + 1) % beats.current;
+  }, []);
+  
+  useBeat(onBeat);
   
   useEffect(() => {
     if(bpm) bpmRef.current = bpm;
   }, [bpm]);
   
   useEffect(() => {
-    let stopListening;
-    let isCancelled = false;
-    let beats = 1;
-    let beat = 0;
-    
-    const tick = time => {
-      const beatInterval = 60 / bpmRef.current * 1000 * beats;
-      const frameInterval = beatInterval / frameCanvases.current.length;
-      if(beat === 0) {
-        frameQueue.current = frameCanvases.current.map((frame, index) => ({
-          time: time * 1000 + frameInterval * index,
-          image: frame,
-        }));
-      }
-      beat = (beat + 1) % beats;
-    };
-    
     (async () => {
       const frames = await getGifFrames(url);
       gifMeta.current = GIF_META[url];
-      beats = gifMeta.current.beats;
+      beats.current = gifMeta.current.beats;
       frameCanvases.current = getFrameCanvases(frames, gifMeta.current.offset);
       
       const canvas = ref.current;
@@ -51,25 +51,7 @@ export default function GifPlayer({ url }) {
       canvas.height = frames[0].dims.height;
       canvas.style.width = `${canvas.width}px`;
       canvas.style.height = `${canvas.height}px`;
-      if(!isCancelled) {
-        // stopListening = listen({
-        //   onTrackChange: () => {},
-        //   onProgress: () => {},
-        //   onError: () => {},
-        //   onBeat: ({ bpm }) => {
-        //     tick(Tone.now());
-        //     bpmRef.current = bpm;
-        //   }
-        // });
-        Timer.addToneListener(tick);
-      }
     })();
-    
-    return () => {
-      // if(stopListening) stopListening();
-      isCancelled = true;
-      Timer.removeListener(tick);
-    }
   }, [url]);
   
   useEffect(() => {

@@ -28,7 +28,7 @@ Tone.Transport.scheduleRepeat(time => {
     // synth.triggerAttackRelease('C3', '8n', time);
     // console.timeEnd('tick');
     // console.time('tick');
-    toneListeners.forEach(callback => callback(time, isDownbeat));
+    toneListeners.forEach(callback => callback(time));
   }
   isDownbeat = !isDownbeat;
 }, '8n');
@@ -39,7 +39,8 @@ export function addToneListener(listener) {
 }
 
 export function removeToneListener(listener) {
-  toneListeners.splice(toneListeners.findIndex(callback => callback === listener), 1);
+  const index = toneListeners.findIndex(callback => callback === listener);
+  if(index !== -1) toneListeners.splice(index, 1);
   if(toneListeners.length === 0) Tone.Transport.stop();
 }
 

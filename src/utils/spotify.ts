@@ -1,23 +1,25 @@
-import { getCurrentPlayback, getTrackAnalysis, Track } from './spotifyApi';
+import { getCurrentPlayback, getTrackAnalysis } from './spotifyApi';
 import * as Tone from 'tone';
 import * as Timer from './timer';
 
 function startPolling({ onUpdate, onError }) {
   let trackId;
   let analysis;
+
   const loadTrack = async () => {
     try{
       const track = await getCurrentPlayback();
-      if(track.id !== trackId || !analysis) {
-        analysis = await getTrackAnalysis(track.id);
+      if(track.type !== 'track') throw new Error(`Not playing music`);
+      if(track.id !== trackId) {
         trackId = track.id;
+        analysis = await getTrackAnalysis(track.id);
       }
       const { beats, track: { tempo } } = analysis;
       onUpdate({
         track, 
         tempo,
         beats: beats.map(({ start }) => start),
-      })
+      });
     } catch(e) {
       onError(e);
     }
@@ -74,23 +76,48 @@ function trackProgress({ getTrack, onProgress, onBeat }) {
   return () => Timer.removeListener(updateProgress);
 }
 
-export default function listen({ onTrackChange, onProgress, onBeat, onError }) {
-  let track;
+
+let stopListening;
+let snapshot = {} as any;
+const listeners = [];
+export function addListener(listener) {
+  listeners.push(listener);
+  if(listeners.length === 1) stopListening = listen();
+  if(snapshot.track && listener.onTrackUpdate) listener.onTrackUpdate(snapshot.track);
+  if(snapshot.progress && listener.onProgress) listener.onProgress(snapshot.progress);
+  if(snapshot.beat && listener.onBeat) listener.onBeat(snapshot.beat);
+}
+
+export function removeListener(listener) {
+  const index = listeners.findIndex(callback => callback === listener);
+  if(index !== -1) listeners.splice(index, 1);
+  if(listeners.length === 0 && stopListening) stopListening(); 
+}
+
+function listen() {
   let lastUpdateTime;
   
   const stopPolling = startPolling({
     onUpdate: data => {
-      track = data;
+      snapshot.track = data;
       lastUpdateTime = Tone.now() * 1000;
-      onTrackChange(data);
+      listeners.forEach(({ onTrackUpdate }) => onTrackUpdate && onTrackUpdate(data));
     },
-    onError,
+    onError: data => {
+      listeners.forEach(({ onError }) => onError && onError(data));
+    },
   });
   
   const stopTracking = trackProgress({
-    getTrack: () => ({ ...track, lastUpdateTime }),
-    onProgress,
-    onBeat,
+    getTrack: () => ({ ...snapshot?.track, lastUpdateTime }),
+    onProgress: data => {
+      snapshot.progress = data;
+      listeners.forEach(({ onProgress }) => onProgress && onProgress(data));
+    },
+    onBeat: data => {
+      snapshot.beat = data;
+      listeners.forEach(({ onBeat }) => onBeat && onBeat(data));
+    },
   });
   
   return () => {

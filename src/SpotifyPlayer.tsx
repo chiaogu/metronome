@@ -1,42 +1,37 @@
 import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import * as Tone from 'tone';
-import listen from './utils/listen';
+import * as Spotify from './utils/spotify';
 
 async function start() {
   await Tone.start();
 }
 
 function useListen() {
-  const [track, onTrackChange] = useState({});
+  const [track, setTrack] = useState({});
   const [progress, onProgress] = useState(0);
   const [beat, onBeat] = useState(undefined);
   const [error, onError] = useState({})
   
   useEffect(() => {
-    const stopListening = listen({
-      onTrackChange,
+    const listener = {
+      onTrackUpdate: track => {
+        setTrack(track);
+        onError({});
+      },
       onProgress,
       onBeat,
       onError,
-    });
-    return stopListening;
+    };
+    Spotify.addListener(listener);
+    return () => Spotify.removeListener(listener);
   }, []);
   
   return { ...track, ...beat, progress, error };
 }
 
 export default function SpotifyPlayer() {
-  const { track, error, progress, beatIndex, bpm = 0 } = useListen();
-  const [highlight, setHighlight] = useState(false);
-  
-  useEffect(() => {
-    setHighlight(true);
-  }, [beatIndex])
-  
-  useEffect(() => {
-    if(highlight) requestAnimationFrame(() => setHighlight(false));
-  }, [highlight])
+  const { track, error, progress } = useListen();
   
   if(error?.message) {
     return (
@@ -88,15 +83,6 @@ export default function SpotifyPlayer() {
             ></div>
           </div>
         </div>
-        <h1
-          style={{
-            width: 'fit-content',
-            fontSize: '100px',
-            transform: highlight ? 'scale(1.5)': 'scale(1)',
-            transition: !highlight && `transform ${1000 * 60 / bpm}ms`,
-            transitionOrigin: '50% 50%',
-          }}
-        >{Math.round(bpm)}</h1>
       </div>
     )
   }

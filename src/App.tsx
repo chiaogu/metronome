@@ -1,10 +1,8 @@
 import { h } from 'preact';
-import SpotifyPlayer from './SpotifyPlayer';
-import Metronome from './Metronome';
+import BottomBar from './BottomBar';
 import * as Tone from 'tone';
 import { useState } from 'preact/hooks';
 import GifTimeline from './GifTimeline';
-import GifPlayer from './GifPlayer';
 import { SharedStateProvider } from './useSharedState';
 
 export default function App() {
@@ -19,9 +17,9 @@ export default function App() {
   return (
     <SharedStateProvider>
       {!isStarted && <button onClick={start}>Start</button>}
-      {!isStarted && (
+      {isStarted && (
         <div>
-          <Metronome/>
+          <BottomBar/>
           <GifTimeline url='https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif'/>
         </div>
       )}
