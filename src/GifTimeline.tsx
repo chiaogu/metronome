@@ -2,6 +2,7 @@ import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import GifPlayer from './GifPlayer';
 import { getGifFrames, getFrameCanvases, getAverageDelay } from './utils/gif';
+import { GIF_META } from './constants';
 
 function drawFrame(ctx, frame, x, y, dSize) {
   const w = frame.width;
@@ -17,12 +18,17 @@ export default function GifTimeline({ url }) {
   
   useEffect(() => {
     const ctx = ref.current.getContext('2d');
-    let offsetY = 0;
+    let scrollY = 0;
     let frameCanvases = [];
+    let meta = {
+      offset: 0,
+      beats: 1
+    };
     let animationId;
     
     (async () => {
       const frames = await getGifFrames(url);
+      meta = GIF_META[url];
       frameCanvases = getFrameCanvases(frames);
       // const frameInterval = getAverageDelay(frames);
       // console.log(frameInterval, frames.length * frameInterval);
@@ -33,43 +39,58 @@ export default function GifTimeline({ url }) {
       
       ctx.canvas.addEventListener('wheel', event => {
         event.preventDefault();
-        offsetY += event.deltaY;
-        if(offsetY <= -size * frames.length) {
-          offsetY = 0;
+        scrollY += event.deltaY;
+        if(scrollY <= -size * frames.length) {
+          scrollY = 0;
         }
-        if(offsetY > 0) {
-          offsetY = -size * frames.length;
+        if(scrollY > 0) {
+          scrollY = -size * frames.length;
         }
       })
     })();
     
     function draw() {
-      ctx.beginPath();
-      ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-      
-      const size = ctx.canvas.width / 2;
-      const duplicateTime = Math.max(2, Math.ceil(ctx.canvas.height / (size * frameCanvases.length) * 2));
-      frameCanvases.forEach((frame, index) => {
+      if(frameCanvases.length > 0) {
+        ctx.beginPath();
+        ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        const size = ctx.canvas.width / 2;
+        const duplicateTime = Math.max(2, Math.ceil(ctx.canvas.height / (size * frameCanvases.length) * 2));
+        frameCanvases.forEach((frame, index) => {
+          for(let i = 0; i < duplicateTime; i++) {
+            const y = (index + i * frameCanvases.length) * size + scrollY;
+            drawFrame(ctx, frame, 0, y, size);
+            
+            ctx.font = '24px mono';
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(`${index}`, 0, y)
+            
+            if(index === 0) {
+              ctx.beginPath();
+              ctx.moveTo(0, y);
+              ctx.lineTo(ctx.canvas.width, y);
+              ctx.strokeStyle = '#000';
+              ctx.stroke();      
+            }
+          }
+        });
+        
         for(let i = 0; i < duplicateTime; i++) {
-          const y = (index + i * frameCanvases.length) * size + offsetY;
-          drawFrame(ctx, frame, 0, y, size);
-          
-          ctx.font = '24px mono';
-          ctx.textBaseline = 'top';
-          ctx.fillStyle = '#fff';
-          ctx.fillText(`${index}`, 0, y)
-          
-          if(index === 0) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(ctx.canvas.width, y);
-            ctx.strokeStyle = '#000';
-            ctx.stroke();      
+          for(let j = 0; j < meta.beats; j++) {
+            ctx.font = '72px mono';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const beatOffsetIndex = Math.floor(j / meta.beats * frameCanvases.length);
+            const frameIndex = (meta.offset + beatOffsetIndex) % frameCanvases.length;
+            const y = (frameIndex + i * frameCanvases.length) * size + scrollY + size / 2;
+            ctx.fillText(`👏`, ctx.canvas.width, y);
           }
         }
-      });
+      }
       animationId = requestAnimationFrame(draw);
     }
     draw();

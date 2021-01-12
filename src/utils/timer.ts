@@ -14,7 +14,8 @@ export function addListener(listener) {
 }
 
 export function removeListener(listener) {
-  listeners.splice(listeners.findIndex(callback => callback === listener), 1);
+  const index = listeners.findIndex(callback => callback === listener);
+  if(index !== -1) listeners.splice(index, 1);
   if(listeners.length === 0) worker.postMessage([WORKER_EVENT.STOP]);
 }
 

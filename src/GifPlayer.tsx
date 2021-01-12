@@ -5,6 +5,7 @@ import { getGifFrames, getFrameCanvases } from './utils/gif';
 import useSharedState from './useSharedState';
 import * as Tone from 'tone';
 import { GIF_META } from './constants';
+import listen from './utils/listen';
     
 export default function GifPlayer({ url }) {
   const { bpm } = useSharedState();
@@ -12,37 +13,64 @@ export default function GifPlayer({ url }) {
   const bpmRef = useRef(60);
   const frameCanvases = useRef([]);
   const frameQueue = useRef([]);
+  const gifMeta = useRef({
+    offset: 0,
+    beats: 1,
+  });
   
   useEffect(() => {
     if(bpm) bpmRef.current = bpm;
   }, [bpm]);
   
   useEffect(() => {
+    let stopListening;
+    let isCancelled = false;
+    let beats = 1;
+    let beat = 0;
+    
+    const tick = time => {
+      const beatInterval = 60 / bpmRef.current * 1000 * beats;
+      const frameInterval = beatInterval / frameCanvases.current.length;
+      if(beat === 0) {
+        frameQueue.current = frameCanvases.current.map((frame, index) => ({
+          time: time * 1000 + frameInterval * index,
+          image: frame,
+        }));
+      }
+      beat = (beat + 1) % beats;
+    };
+    
     (async () => {
       const frames = await getGifFrames(url);
-      const meta = GIF_META[url];
-      frameCanvases.current = getFrameCanvases(frames, meta.offset);
+      gifMeta.current = GIF_META[url];
+      beats = gifMeta.current.beats;
+      frameCanvases.current = getFrameCanvases(frames, gifMeta.current.offset);
       
       const canvas = ref.current;
       canvas.width = frames[0].dims.width;
       canvas.height = frames[0].dims.height;
       canvas.style.width = `${canvas.width}px`;
       canvas.style.height = `${canvas.height}px`;
+      if(!isCancelled) {
+        // stopListening = listen({
+        //   onTrackChange: () => {},
+        //   onProgress: () => {},
+        //   onError: () => {},
+        //   onBeat: ({ bpm }) => {
+        //     tick(Tone.now());
+        //     bpmRef.current = bpm;
+        //   }
+        // });
+        Timer.addToneListener(tick);
+      }
     })();
+    
+    return () => {
+      // if(stopListening) stopListening();
+      isCancelled = true;
+      Timer.removeListener(tick);
+    }
   }, [url]);
-  
-  useEffect(() => {
-    const tick = time => {
-      const beatInterval = 60 / bpmRef.current * 1000;
-      const frameInterval = beatInterval / frameCanvases.current.length;
-      frameQueue.current = frameCanvases.current.map((frame, index) => ({
-        time: time * 1000 + frameInterval * index,
-        image: frame,
-      }));
-    };
-    Timer.addToneListener(tick);
-    return () => Timer.removeListener(tick);
-  }, [])
   
   useEffect(() => {
     let lastTimeOnBeat;
@@ -50,7 +78,13 @@ export default function GifPlayer({ url }) {
     const ctx = ref.current.getContext('2d');
     
     function draw() {
-      const isOnBeat = frameQueue.current.length === frameCanvases.current.length;
+      let isOnBeat = false;
+      for(let i = 0; i < gifMeta.current.beats; i++) {
+        const index = frameCanvases.current.length - frameQueue.current.length;
+        const beatIndex = Math.floor(i / gifMeta.current.beats * frameCanvases.current.length);
+        isOnBeat = index === beatIndex;
+        if(isOnBeat) break;
+      }
       
       while(Tone.now() * 1000 >= frameQueue.current[0]?.time) {
         ctx.drawImage(frameQueue.current[0].image, 0, 0);
