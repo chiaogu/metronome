@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 import * as Timer from './utils/timer';
 import useSharedState from './useSharedState';
 import * as Spotify from './utils/spotify';
@@ -15,11 +15,7 @@ export default function useBeat(onBeat) {
       }
       Timer.addToneListener(tick);
       return () => Timer.removeToneListener(tick);
-    }
-  }, [isSpotify, onBeat]);
-  
-  useEffect(() => {
-    if(isSpotify) {
+    } else {
       const listener = {
         onBeat: () => {
           if(onBeat) onBeat();
@@ -29,7 +25,7 @@ export default function useBeat(onBeat) {
       Spotify.addListener(listener);
       return () => Spotify.removeListener(listener);
     }
-  }, [isSpotify, onBeat])
+  }, [isSpotify, onBeat]);
 
   useEffect(() => {
     if(isOnBeat) setOnBeat(false);

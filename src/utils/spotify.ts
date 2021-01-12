@@ -1,6 +1,7 @@
 import { getCurrentPlayback, getTrackAnalysis } from './spotifyApi';
 import * as Tone from 'tone';
 import * as Timer from './timer';
+import { BASE_BPM } from '../constants';
 
 function startPolling({ onUpdate, onError }) {
   let trackId;
@@ -63,7 +64,7 @@ function trackProgress({ getTrack, onProgress, onBeat }) {
     if(prevBeatIndex !== nextBeatIndex) {
       if(prevBeatIndex !== 0) {
         beatIndex = nextBeatIndex;
-        const currentBpm = 1 / (beats[nextBeatIndex] - beats[prevBeatIndex]) * 60;
+        const currentBpm = 1 / (beats[nextBeatIndex] - beats[prevBeatIndex]) * BASE_BPM;
         if(Math.abs(bpm - currentBpm) < 10) {
           onBeat({ beatIndex, bpm });
         }

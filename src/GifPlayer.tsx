@@ -1,17 +1,15 @@
 import { h } from 'preact';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import * as Timer from './utils/timer';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { getGifFrames, getFrameCanvases } from './utils/gif';
 import useSharedState from './useSharedState';
 import * as Tone from 'tone';
-import { GIF_META } from './constants';
-import listen from './utils/spotify';
+import { BASE_BPM, GIF_META } from './constants';
 import useBeat from './useBeat';
     
 export default function GifPlayer({ url }) {
   const { bpm } = useSharedState();
   const ref = useRef<HTMLCanvasElement>();
-  const bpmRef = useRef(60);
+  const bpmRef = useRef(bpm);
   const frameCanvases = useRef([]);
   const frameQueue = useRef([]);
   const gifMeta = useRef({
@@ -22,7 +20,7 @@ export default function GifPlayer({ url }) {
   const beat = useRef(0);
   
   const onBeat = useCallback(() => {
-    const beatInterval = 60 / bpmRef.current * 1000 * beats.current;
+    const beatInterval = BASE_BPM / bpmRef.current * 1000 * beats.current;
     const frameInterval = beatInterval / frameCanvases.current.length;
     if(frameCanvases.current.length !== 0 && beat.current === 0) {
       frameQueue.current = frameCanvases.current.map((frame, index) => ({
