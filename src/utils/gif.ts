@@ -1,10 +1,14 @@
 import { parseGIF, decompressFrames } from 'gifuct-js'
 
+const cache = {};
+
 export async function getGifFrames(url) {
+  if(cache[url]) return cache[url];
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
   const gif = await parseGIF(buffer);
-  return await decompressFrames(gif, true);
+  cache[url] = await decompressFrames(gif, true);
+  return cache[url];
 }
 
 export function drawOnOffScreenCanvas(frame) {
@@ -39,4 +43,14 @@ export function getFrameCanvases(frames, offset = 0) {
 export function getAverageDelay(frames) {
   const sum = frames.reduce((sum, { delay }) => sum + delay, 0);
   return sum / frames.length;
+}
+
+export function isFrameOnBeat(frame, frames, beats, offset) {
+  let isOnBeat = false;
+  for(let i = 0; i < beats; i++) {
+    const beatIndex = (Math.floor(i / beats * frames) + offset) % frames;
+    isOnBeat = frame === beatIndex;
+    if(isOnBeat) break;
+  }
+  return isOnBeat;
 }

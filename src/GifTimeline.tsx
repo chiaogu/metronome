@@ -115,7 +115,6 @@ export default function GifTimeline({ url }) {
           height: '100%',
         }}
       />
-      <GifPlayer url={url}/>
     </div>
   );
 }

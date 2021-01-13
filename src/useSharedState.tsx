@@ -12,7 +12,7 @@ const StateContext = createContext({
 
 export function SharedStateProvider({ children }: { children?: any }) {
   const [bpm, setBpm] = useState(60);
-  const [isSpotify, setSpotify] = useState(false);
+  const [isSpotify, setSpotify] = useState(true);
   
   useEffect(() => {
     Timer.setToneBpm(bpm);

@@ -9,7 +9,7 @@ export type Track = {
   type: string;
 } | null;
 
-export const TOKEN = 'BQDCPrNjfcVdclSPKdIpeSVbES7YZnF1y5uJDdcvbXYGmC2-t-uIIIfNn-kOD7VDR59lJPeix6WLq8FrRi8ublaSpJSuxlfrYX3P-4WYU3WZuiEzOP_6JJ5NnFTqRomFlJukzDvF_B96xLMnKIYgAzIXAveFEHE-F5dtPDZ_';
+export const TOKEN = 'BQBAOB60iNadFpaYsxvu93p2O7n756Mbwp8BjXm-GazEcurnuYZeiqmZBl3PzyL0YH9tJwgSYRzlZvGvw7uumhC7hi5IWVRGYQlbzr0t1muFdvu9H4K5tNeMGNiGKOrQ_rJifUwv5W7gJtCikwMsqGgkPsQo5hX9WTcFXuPK';
 
 async function request(endpoint) {
   const res = await fetch(`https://api.spotify.com/v1/${endpoint}`, {

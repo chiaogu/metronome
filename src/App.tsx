@@ -4,6 +4,7 @@ import * as Tone from 'tone';
 import { useState } from 'preact/hooks';
 import GifTimeline from './GifTimeline';
 import { SharedStateProvider } from './useSharedState';
+import GifEditor from './GifEditor';
 
 export default function App() {
   const [isStarted, setStarted] = useState(false);
@@ -19,7 +20,8 @@ export default function App() {
       {!isStarted && <button onClick={start}>Start</button>}
       {isStarted && (
         <div>
-          <GifTimeline url='https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif'/>
+          {/* <GifTimeline url='https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif'/> */}
+          <GifEditor/>
           <BottomBar/>
         </div>
       )}

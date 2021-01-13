@@ -1,12 +1,12 @@
 import { h } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
-import { getGifFrames, getFrameCanvases } from './utils/gif';
+import { getGifFrames, getFrameCanvases, isFrameOnBeat } from './utils/gif';
 import useSharedState from './useSharedState';
 import * as Tone from 'tone';
 import { BASE_BPM, GIF_META } from './constants';
 import useBeat from './useBeat';
     
-export default function GifPlayer({ url }) {
+export default function GifPlayer({ url, style, previewFrame }: { url, style?, previewFrame? }) {
   const { bpm } = useSharedState();
   const ref = useRef<HTMLCanvasElement>();
   const bpmRef = useRef(bpm);
@@ -18,9 +18,10 @@ export default function GifPlayer({ url }) {
   });
   const beats = useRef(1);
   const beat = useRef(0);
+  const previewFrameRef = useRef(undefined);
   
   const onBeat = useCallback(() => {
-    const beatInterval = BASE_BPM / bpmRef.current * 1000 * beats.current;
+    const beatInterval = BASE_BPM / bpmRef.current * 1000 * gifMeta.current.beats;
     const frameInterval = beatInterval / frameCanvases.current.length;
     if(frameCanvases.current.length !== 0 && beat.current === 0) {
       frameQueue.current = frameCanvases.current.map((frame, index) => ({
@@ -28,7 +29,7 @@ export default function GifPlayer({ url }) {
         image: frame,
       }));
     }
-    beat.current = (beat.current + 1) % beats.current;
+    beat.current = (beat.current + 1) % gifMeta.current.beats;
   }, []);
   
   useBeat(onBeat);
@@ -38,57 +39,69 @@ export default function GifPlayer({ url }) {
   }, [bpm]);
   
   useEffect(() => {
+    previewFrameRef.current = previewFrame;
+  }, [previewFrame]);
+  
+  useEffect(() => {
+    let lastTimeOnBeat;
+    let animationId;
+    
     (async () => {
       const frames = await getGifFrames(url);
       gifMeta.current = GIF_META[url];
-      beats.current = gifMeta.current.beats;
       frameCanvases.current = getFrameCanvases(frames, gifMeta.current.offset);
       
       const canvas = ref.current;
       canvas.width = frames[0].dims.width;
       canvas.height = frames[0].dims.height;
-      canvas.style.width = `${canvas.width}px`;
-      canvas.style.height = `${canvas.height}px`;
-    })();
-  }, [url]);
-  
-  useEffect(() => {
-    let lastTimeOnBeat;
-    let animationId;
-    const ctx = ref.current.getContext('2d');
-    
-    function draw() {
-      let isOnBeat = false;
-      for(let i = 0; i < gifMeta.current.beats; i++) {
-        const index = frameCanvases.current.length - frameQueue.current.length;
-        const beatIndex = Math.floor(i / gifMeta.current.beats * frameCanvases.current.length);
-        isOnBeat = index === beatIndex;
-        if(isOnBeat) break;
-      }
+      // canvas.style.width = `${canvas.width}px`;
+      // canvas.style.height = `${canvas.height}px`;
       
-      while(Tone.now() * 1000 >= frameQueue.current[0]?.time) {
-        ctx.drawImage(frameQueue.current[0].image, 0, 0);
-        frameQueue.current.shift();
-      }
+      const ctx = ref.current.getContext('2d');
       
-      if(isOnBeat || Tone.now() * 1000 - lastTimeOnBeat < 100) {
-        ctx.font = '72px mono';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(`👏`, ctx.canvas.width, ctx.canvas.height);
-        if(isOnBeat) lastTimeOnBeat = Tone.now() * 1000;
+      function draw() {
+        if(previewFrameRef.current === undefined) {
+          const index = (
+            frameCanvases.current.length
+            - frameQueue.current.length
+            + gifMeta.current.offset
+          ) % frameCanvases.current.length;
+          const isOnBeat = isFrameOnBeat(
+            index,
+            frameCanvases.current.length,
+            gifMeta.current.beats,
+            gifMeta.current.offset
+          );
+          
+          while(Tone.now() * 1000 >= frameQueue.current[0]?.time) {
+            ctx.drawImage(frameQueue.current[0].image, 0, 0);
+            frameQueue.current.shift();
+          }
+          
+          if(isOnBeat || Tone.now() * 1000 - lastTimeOnBeat < 100) {
+            ctx.font = '72px mono';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`👏`, ctx.canvas.width, ctx.canvas.height);
+            if(isOnBeat) lastTimeOnBeat = Tone.now() * 1000;
+          }
+        } else {
+          const frames = frameCanvases.current.length;
+          const index = (previewFrameRef.current + frames - gifMeta.current.offset) % frames;
+          ctx.drawImage(frameCanvases.current[index], 0, 0);
+        }        
+        
+        animationId = requestAnimationFrame(draw);
       }
-      
-      animationId = requestAnimationFrame(draw);
-    }
-    draw();
+      draw();
+    })(); 
     
     return () => {
       if(animationId) cancelAnimationFrame(animationId);
     }
-  }, []);
+  }, [url]);
   
   return (
-    <canvas ref={ref}/>
+    <canvas ref={ref} style={style}/>
   );
 }

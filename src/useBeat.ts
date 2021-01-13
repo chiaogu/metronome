@@ -3,7 +3,7 @@ import * as Timer from './utils/timer';
 import useSharedState from './useSharedState';
 import * as Spotify from './utils/spotify';
 
-export default function useBeat(onBeat) {
+export default function useBeat(onBeat?) {
   const [isOnBeat, setOnBeat] = useState(false);
   const { isSpotify } = useSharedState();
   
