@@ -1,7 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import GifPlayer from './GifPlayer';
-import { getGifFrames, getFrameCanvases, getAverageDelay } from './utils/gif';
+import { getGifFrames, getFrameCanvases } from './utils/gif';
 import { GIF_META } from './constants';
 
 function drawFrame(ctx, frame, x, y, dSize) {
@@ -17,6 +17,7 @@ export default function GifTimeline({ url }) {
   const ref = useRef<HTMLCanvasElement>();
   
   useEffect(() => {
+    const size = 85;
     const ctx = ref.current.getContext('2d');
     let scrollY = 0;
     let frameCanvases = [];
@@ -35,7 +36,6 @@ export default function GifTimeline({ url }) {
       
       ctx.canvas.width = ctx.canvas.clientWidth;
       ctx.canvas.height = ctx.canvas.clientHeight;
-      const size = ctx.canvas.width / 2;
       
       ctx.canvas.addEventListener('wheel', event => {
         event.preventDefault();
@@ -56,18 +56,17 @@ export default function GifTimeline({ url }) {
         ctx.fillStyle = '#fff';
         ctx.fill();
         
-        const size = ctx.canvas.width / 2;
         const duplicateTime = Math.max(2, Math.ceil(ctx.canvas.height / (size * frameCanvases.length) * 2));
         frameCanvases.forEach((frame, index) => {
           for(let i = 0; i < duplicateTime; i++) {
             const y = (index + i * frameCanvases.length) * size + scrollY;
             drawFrame(ctx, frame, 0, y, size);
             
-            ctx.font = '24px mono';
-            ctx.textBaseline = 'top';
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#fff';
-            ctx.fillText(`${index}`, 0, y)
+            ctx.font = '48px mono';
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#000';
+            ctx.fillText(`${index}`, ctx.canvas.width, y + size / 2)
             
             if(index === 0) {
               ctx.beginPath();
@@ -103,6 +102,8 @@ export default function GifTimeline({ url }) {
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
+        maxWidth: '400px',
         height: '100%',
       }}
     >
@@ -110,7 +111,7 @@ export default function GifTimeline({ url }) {
         ref={ref}
         style={{
           border: '1px solid black',
-          width: '300px',
+          width: '100%',
           height: '100%',
         }}
       />

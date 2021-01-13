@@ -19,8 +19,8 @@ export default function App() {
       {!isStarted && <button onClick={start}>Start</button>}
       {isStarted && (
         <div>
-          <BottomBar/>
           <GifTimeline url='https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif'/>
+          <BottomBar/>
         </div>
       )}
     </SharedStateProvider>
