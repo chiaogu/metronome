@@ -12,6 +12,8 @@ const url = 'https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif';
 export default function GifEditor({ }: { url? }) {
   const [previewFrame, setPreviewFrame] = useState(undefined);
   const [frames, setFrames] = useState([]);
+  const { meta, setMeta } = useSharedState();
+  const { offset, beats } = meta[url];
   
   useEffect(() => {
     (async () => {
@@ -40,11 +42,14 @@ export default function GifEditor({ }: { url? }) {
           height: '300px',
         }}
         url={url}
+        meta={{ offset, beats }}
       />
       <Frames
         frames={frames}
-        meta={GIF_META[url]}
+        offset={offset}
+        beats={beats}
         previewFrame={previewFrame}
+        onOffsetChange={newOffset => setMeta(url, { offset: newOffset })}
       />
     </div>
   )

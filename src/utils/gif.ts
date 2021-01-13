@@ -22,8 +22,8 @@ export function drawOnOffScreenCanvas(frame) {
   return canvas;
 }
 
-export function getFrameCanvases(frames, offset = 0) {
-  const canvases = frames.map((frame, i) => {
+export function getFrameCanvases(frames) {
+  return frames.map((frame, i) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = frame.dims.width;
@@ -33,11 +33,6 @@ export function getFrameCanvases(frames, offset = 0) {
     }
     return canvas;
   });
-  const head = canvases.splice(0, offset);
-  return [
-    ...canvases,
-    ...head
-  ]
 }
 
 export function getAverageDelay(frames) {

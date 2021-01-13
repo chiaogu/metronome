@@ -3,10 +3,10 @@ import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { getGifFrames, getFrameCanvases, isFrameOnBeat } from './utils/gif';
 import useSharedState from './useSharedState';
 import * as Tone from 'tone';
-import { BASE_BPM, GIF_META } from './constants';
+import { BASE_BPM } from './constants';
 import useBeat from './useBeat';
     
-export default function GifPlayer({ url, style, previewFrame }: { url, style?, previewFrame? }) {
+export default function GifPlayer({ url, style, previewFrame, meta }: { url, meta, style?, previewFrame? }) {
   const { bpm } = useSharedState();
   const ref = useRef<HTMLCanvasElement>();
   const bpmRef = useRef(bpm);
@@ -16,7 +16,6 @@ export default function GifPlayer({ url, style, previewFrame }: { url, style?, p
     offset: 0,
     beats: 1,
   });
-  const beats = useRef(1);
   const beat = useRef(0);
   const previewFrameRef = useRef(undefined);
   
@@ -24,7 +23,11 @@ export default function GifPlayer({ url, style, previewFrame }: { url, style?, p
     const beatInterval = BASE_BPM / bpmRef.current * 1000 * gifMeta.current.beats;
     const frameInterval = beatInterval / frameCanvases.current.length;
     if(frameCanvases.current.length !== 0 && beat.current === 0) {
-      frameQueue.current = frameCanvases.current.map((frame, index) => ({
+      const head = frameCanvases.current.slice().splice(0, gifMeta.current.offset);
+      frameQueue.current = [
+        ...frameCanvases.current,
+        ...head
+      ].map((frame, index) => ({
         time: Tone.now() * 1000 + frameInterval * index,
         image: frame,
       }));
@@ -43,13 +46,16 @@ export default function GifPlayer({ url, style, previewFrame }: { url, style?, p
   }, [previewFrame]);
   
   useEffect(() => {
+    gifMeta.current = meta;
+  }, [meta]);
+  
+  useEffect(() => {
     let lastTimeOnBeat;
     let animationId;
     
     (async () => {
       const frames = await getGifFrames(url);
-      gifMeta.current = GIF_META[url];
-      frameCanvases.current = getFrameCanvases(frames, gifMeta.current.offset);
+      frameCanvases.current = getFrameCanvases(frames);
       
       const canvas = ref.current;
       canvas.width = frames[0].dims.width;

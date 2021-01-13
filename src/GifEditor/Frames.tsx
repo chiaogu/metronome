@@ -1,11 +1,8 @@
 import { h } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
-import GifPlayer from '../GifPlayer';
-import useBeat from '../useBeat';
-import useSharedState from '../useSharedState';
+import { useEffect, useRef } from 'preact/hooks';
 import { isFrameOnBeat } from '../utils/gif';
 
-export default function Frames({ frames, meta: { offset, beats }, previewFrame = 0 }) {
+export default function Frames({ frames, offset, beats, onOffsetChange, previewFrame = 0 }) {
   const container = useRef<HTMLElement>();
   const content = useRef<HTMLElement>();
   
@@ -34,7 +31,7 @@ export default function Frames({ frames, meta: { offset, beats }, previewFrame =
     <div
       ref={container}
       style={{
-        marginTop: '24px',
+        marginTop: '48px',
         width: '100%',
         height: '50px',
         display: 'flex',
@@ -58,14 +55,16 @@ export default function Frames({ frames, meta: { offset, beats }, previewFrame =
               const isOnBeat = isFrameOnBeat(index, frames.length, beats, offset);
               return (
                 <span
+                  onClick={() => onOffsetChange(index)}
                   style={{
+                    flex: '0 0 auto',
                     fontFamily: 'monospace',
                     fontSize: isOnBeat ? '48px' : '24px',
-                    margin: '0 24px',
+                    margin: isOnBeat ? '0 17px' : '0 24px',
                     cursor: isOnBeat ? 'default' : 'pointer',
                   }}
                 >
-                  {isOnBeat ? '👏' : index}
+                  {isOnBeat ? '👏' : `${index + 1}`}
                 </span>
               );
             })
