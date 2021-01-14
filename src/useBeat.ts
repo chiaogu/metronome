@@ -28,7 +28,9 @@ export default function useBeat(onBeat?) {
   }, [isSpotify, onBeat]);
 
   useEffect(() => {
-    if(isOnBeat) setOnBeat(false);
+    if(isOnBeat) {
+      requestAnimationFrame(() => setOnBeat(false));
+    }
   }, [isOnBeat]);
   
   return isOnBeat;

@@ -6,7 +6,7 @@ import * as Tone from 'tone';
 import { BASE_BPM } from './constants';
 import useBeat from './useBeat';
     
-export default function GifPlayer({ url, style, previewFrame, meta }: { url, meta, style?, previewFrame? }) {
+export default function GifPlayer({ url, style, previewFrame, meta, onFrameChange }: { url, meta, style?, previewFrame?, onFrameChange? }) {
   const { bpm } = useSharedState();
   const ref = useRef<HTMLCanvasElement>();
   const bpmRef = useRef(bpm);
@@ -23,9 +23,10 @@ export default function GifPlayer({ url, style, previewFrame, meta }: { url, met
     const beatInterval = BASE_BPM / bpmRef.current * 1000 * gifMeta.current.beats;
     const frameInterval = beatInterval / frameCanvases.current.length;
     if(frameCanvases.current.length !== 0 && beat.current === 0) {
-      const head = frameCanvases.current.slice().splice(0, gifMeta.current.offset);
+      const canvases = frameCanvases.current.slice();
+      const head = canvases.splice(0, gifMeta.current.offset);
       frameQueue.current = [
-        ...frameCanvases.current,
+        ...canvases,
         ...head
       ].map((frame, index) => ({
         time: Tone.now() * 1000 + frameInterval * index,
@@ -50,7 +51,6 @@ export default function GifPlayer({ url, style, previewFrame, meta }: { url, met
   }, [meta]);
   
   useEffect(() => {
-    let lastTimeOnBeat;
     let animationId;
     
     (async () => {
@@ -64,16 +64,16 @@ export default function GifPlayer({ url, style, previewFrame, meta }: { url, met
       // canvas.style.height = `${canvas.height}px`;
       
       const ctx = ref.current.getContext('2d');
+      const getCurrentFrameIndex = () => (
+        frameCanvases.current.length
+        - frameQueue.current.length
+        + gifMeta.current.offset
+      ) % frameCanvases.current.length;
       
       function draw() {
         if(previewFrameRef.current === undefined) {
-          const index = (
-            frameCanvases.current.length
-            - frameQueue.current.length
-            + gifMeta.current.offset
-          ) % frameCanvases.current.length;
           const isOnBeat = isFrameOnBeat(
-            index,
+            getCurrentFrameIndex(),
             frameCanvases.current.length,
             gifMeta.current.beats,
             gifMeta.current.offset
@@ -84,17 +84,9 @@ export default function GifPlayer({ url, style, previewFrame, meta }: { url, met
             frameQueue.current.shift();
           }
           
-          if(isOnBeat || Tone.now() * 1000 - lastTimeOnBeat < 100) {
-            ctx.font = '72px mono';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(`👏`, ctx.canvas.width, ctx.canvas.height);
-            if(isOnBeat) lastTimeOnBeat = Tone.now() * 1000;
-          }
+          onFrameChange(getCurrentFrameIndex());
         } else {
-          const frames = frameCanvases.current.length;
-          const index = (previewFrameRef.current + frames - gifMeta.current.offset) % frames;
-          ctx.drawImage(frameCanvases.current[index], 0, 0);
+          ctx.drawImage(frameCanvases.current[previewFrameRef.current], 0, 0);
         }        
         
         animationId = requestAnimationFrame(draw);
