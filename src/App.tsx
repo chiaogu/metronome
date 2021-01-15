@@ -2,12 +2,12 @@ import { h } from 'preact';
 import BottomBar from './BottomBar';
 import * as Tone from 'tone';
 import { useState } from 'preact/hooks';
-import GifTimeline from './GifTimeline';
 import { SharedStateProvider } from './useSharedState';
 import GifEditor from './GifEditor';
+import Gallery from './Gallery';
 
 export default function App() {
-  const [editingGifUrl, setEditingGifUrl] = useState('https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif');
+  const [editingGifUrl, setEditingGifUrl] = useState(undefined);
   const [isStarted, setStarted] = useState(false);
   
   async function start(){
@@ -21,9 +21,9 @@ export default function App() {
       {!isStarted && <button onClick={start}>Start</button>}
       {isStarted && (
         <div>
-          {/* {!editingGifUrl && (
-            
-          )} */}
+          {!editingGifUrl && (
+            <Gallery onSelect={setEditingGifUrl}/>
+          )}
           {editingGifUrl && (
             <GifEditor
               url={editingGifUrl}

@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { GIF_META } from '../constants';
 import GifPlayer from '../GifPlayer';
 import useBeat from '../useBeat';
@@ -9,18 +9,26 @@ import Frames from './Frames';
 
 const MAX_BEATS = 16;
 
+function getMeaxBeats(frames) {
+  let closestBeat = 1;
+  while(Math.floor(frames / 8) > closestBeat) closestBeat <<= 1;
+  return Math.min(MAX_BEATS, closestBeat);
+}
+
 export default function GifEditor({ url, onClose }) {
   const [isSync, setSync] = useState(true);
   const [previewFrame, setPreviewFrame] = useState(undefined);
   const [frames, setFrames] = useState([]);
   const { meta, setMeta } = useSharedState();
-  const { offset, beats } = meta[url];
+  const { offset = 0, beats = 1 } = meta[url] || {};
   const isOnBeat = useBeat();
-  const maxBeats = Math.min(MAX_BEATS, frames.length / 8);
+  const maxBeats = useRef(1);
   
   useEffect(() => {
     (async () => {
-      setFrames(await getGifFrames(url));
+      const gifFrames = await getGifFrames(url);
+      setFrames(gifFrames);
+      maxBeats.current = getMeaxBeats(gifFrames.length);
     })()
   }, [])
   
@@ -28,12 +36,12 @@ export default function GifEditor({ url, onClose }) {
 
   function nextBeats() {
     let nextBeats = beats << 1;
-    if(nextBeats > maxBeats) nextBeats = 1;
+    if(nextBeats > maxBeats.current) nextBeats = 1;
     setMeta(url, { beats: nextBeats })
   }
   
   function getSpeed() {
-    return Math.pow(2, Math.log2(maxBeats) - Math.log2(beats));
+    return Math.pow(2, Math.log2(maxBeats.current) - Math.log2(beats));
   }
   
   return (
