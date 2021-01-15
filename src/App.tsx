@@ -7,6 +7,7 @@ import { SharedStateProvider } from './useSharedState';
 import GifEditor from './GifEditor';
 
 export default function App() {
+  const [editingGifUrl, setEditingGifUrl] = useState('https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif');
   const [isStarted, setStarted] = useState(false);
   
   async function start(){
@@ -20,8 +21,15 @@ export default function App() {
       {!isStarted && <button onClick={start}>Start</button>}
       {isStarted && (
         <div>
-          {/* <GifTimeline url='https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif'/> */}
-          <GifEditor/>
+          {/* {!editingGifUrl && (
+            
+          )} */}
+          {editingGifUrl && (
+            <GifEditor
+              url={editingGifUrl}
+              onClose={() => setEditingGifUrl(undefined)}
+            />
+          )}
           <BottomBar/>
         </div>
       )}

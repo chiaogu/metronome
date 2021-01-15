@@ -6,6 +6,72 @@ const FRAME_LABEL_WIDTH = 48;
 const FRAME_MARGIN = 17;
 const FRAME_WIDTH = FRAME_LABEL_WIDTH + FRAME_MARGIN * 2;
 
+function useScroll(ref, callback) {
+  const onScroll = useCallback(({ deltaX, deltaY }) => {
+    if(Math.abs(deltaY) > Math.abs(deltaX)) {
+      callback(deltaY);
+    } else {
+      callback(-deltaX);
+    }
+  }, [callback]);
+  
+  useEffect(() => {
+    if(!ref) return;
+    const onWheel = event => {
+      event.preventDefault();
+      const { deltaX, deltaY } = event;
+      onScroll({ deltaX, deltaY });
+    };
+    ref.addEventListener('wheel', onWheel);
+    return () => {
+      ref.removeEventListener('wheel', onWheel);
+    }
+  }, [ref]);
+  
+  useEffect(() => {
+    if(!ref) return;
+    let animation;
+    let lastTouchX;
+    let v;
+    
+    const inertialScroll = () => {
+      const delta = 0.5;
+      if(v > 0) {
+        v -= delta;
+        onScroll({ deltaX: v, deltaY: 0 });
+        if(v >= 0) requestAnimationFrame(inertialScroll);
+      } else {
+        v += delta;
+        onScroll({ deltaX: v, deltaY: 0 });
+        if(v <= 0) requestAnimationFrame(inertialScroll);
+      }
+    }
+    
+    const onTouchStart = ({ touches: [{ clientX }] }) => {
+      if(animation) cancelAnimationFrame(animation);
+      lastTouchX = clientX;
+    }
+    const onTouchMove = event => {
+      event.preventDefault();
+      const { touches: [{ clientX }] } = event;
+      v = clientX - lastTouchX
+      lastTouchX = clientX;
+      onScroll({ deltaX: v, deltaY: 0 });
+    };
+    const onTouchEnd = () => {
+      inertialScroll();
+    };
+    ref.addEventListener('touchstart', onTouchStart);
+    ref.addEventListener('touchmove', onTouchMove);
+    ref.addEventListener('touchend', onTouchEnd);
+    return () => {
+      ref.removeEventListener('touchstart', onTouchStart);
+      ref.removeEventListener('touchmove', onTouchMove);
+      ref.removeEventListener('touchend', onTouchEnd);
+    }
+  }, [ref]);
+}
+
 export default function Frames({ frames, offset, beats, onOffsetChange, previewFrame, onPreviewFrameChange }) {
   const container = useRef<HTMLElement>();
   const content = useRef<HTMLElement>();
@@ -23,30 +89,20 @@ export default function Frames({ frames, offset, beats, onOffsetChange, previewF
     const centerIndex = Math.round(container.current.clientWidth / FRAME_WIDTH / 2);
     const centerFrame = (offset + centerIndex) % frames.length;
     onPreviewFrameChange(centerFrame);
-    
+  }, [frames, onPreviewFrameChange]);
+  
+  useScroll(container.current, scroll);
+  
+  useEffect(() => {
+    const visibleFrameCount = Math.ceil(container.current.clientWidth / FRAME_WIDTH);
+    const offset = Math.round(visibleFrameCount / 2) - 1;
     const isEvenFrame = Math.floor(container.current.clientWidth / FRAME_WIDTH) % 2 === 0;
     const center = 
       content.current.clientWidth 
       - container.current.clientWidth % FRAME_WIDTH / 2
       + (isEvenFrame ? FRAME_WIDTH / 2 : 0);
-      
-    // container.current.scrollLeft = center;
-  }, [frames, onPreviewFrameChange]);
-  
-  useEffect(() => {
-    const onWheel = event => {
-      event.preventDefault();
-      if(Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-        scroll(event.deltaY);
-      } else {
-        scroll(-event.deltaX);
-      }
-    };
-    container.current.addEventListener('wheel', onWheel);
-    return () => {
-      container.current.removeEventListener('wheel', onWheel);
-    }
-  }, [scroll]);
+    container.current.scrollLeft = center + (previewFrame - offset) * FRAME_WIDTH;
+  }, []);
   
   return (
     <div

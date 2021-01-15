@@ -7,15 +7,16 @@ import useSharedState from '../useSharedState';
 import { getGifFrames } from '../utils/gif';
 import Frames from './Frames';
 
-const url = 'https://media.giphy.com/media/6mr2y6RGPcEU0/giphy.gif';
+const MAX_BEATS = 16;
 
-export default function GifEditor({ }: { url? }) {
+export default function GifEditor({ url, onClose }) {
   const [isSync, setSync] = useState(true);
   const [previewFrame, setPreviewFrame] = useState(undefined);
   const [frames, setFrames] = useState([]);
   const { meta, setMeta } = useSharedState();
   const { offset, beats } = meta[url];
   const isOnBeat = useBeat();
+  const maxBeats = Math.min(MAX_BEATS, frames.length / 8);
   
   useEffect(() => {
     (async () => {
@@ -26,10 +27,13 @@ export default function GifEditor({ }: { url? }) {
   if(frames.length === 0) return null;
 
   function nextBeats() {
-    const maxBeats = Math.min(16, frames.length / 8);
     let nextBeats = beats << 1;
     if(nextBeats > maxBeats) nextBeats = 1;
     setMeta(url, { beats: nextBeats })
+  }
+  
+  function getSpeed() {
+    return Math.pow(2, Math.log2(maxBeats) - Math.log2(beats));
   }
   
   return (
@@ -106,7 +110,7 @@ export default function GifEditor({ }: { url? }) {
             cursor: 'pointer',
           }}
         >
-          {`👏 x${beats}`}
+          {`${getSpeed()}x`}
         </div>
         <div
           onClick={() => setSync(!isSync)}
@@ -118,6 +122,17 @@ export default function GifEditor({ }: { url? }) {
           }}
         >
           {isSync ? '||' : '>'}
+        </div>
+        <div
+          onClick={onClose}
+          style={{
+            color: '#fff',
+            fontSize: '36px',
+            fontFamily: 'monospace',
+            cursor: 'pointer',
+          }}
+        >
+          x
         </div>
       </div>
     </div>
